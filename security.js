@@ -275,12 +275,52 @@ class SecurityManager {
     }
   }
 
+  installScreenshotEnhancement() {
+    try {
+      const { tools } = require('playwright-core/lib/coreBundle');
+      if (Array.isArray(tools.browserTools)) {
+        const screenshotTool = tools.browserTools.find(t => t.schema && t.schema.name === 'browser_take_screenshot');
+        if (screenshotTool && screenshotTool.handle) {
+          const origHandle = screenshotTool.handle;
+          screenshotTool.handle = async function (context, params, response) {
+            const origRegisterImageResult = response.registerImageResult;
+            let imageRegistered = false;
+            response.registerImageResult = async function (data, fileType) {
+              imageRegistered = true;
+              return origRegisterImageResult.call(this, data, fileType);
+            };
+
+            const origAddFileResult = response.addFileResult;
+            let lastData = null;
+            let lastFileType = params.type || (params.filename && params.filename.endsWith('.jpeg') ? 'jpeg' : 'png');
+            response.addFileResult = async function (resolvedFile, data) {
+              lastData = data;
+              return origAddFileResult.call(this, resolvedFile, data);
+            };
+
+            const result = await origHandle.call(this, context, params, response);
+
+            // If registerImageResult was not called because params.filename was set, call it now
+            // so Claude and other AI clients ALWAYS get the image preview in the chat!
+            if (!imageRegistered && lastData) {
+              await response.registerImageResult(lastData, lastFileType);
+            }
+            return result;
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('[SECURITY] Could not patch screenshot tool:', e.message);
+    }
+  }
+
   init() {
     if (this.initialized) return;
     this.initialized = true;
 
     this.installHttpHooks();
     this.installBrowserHooks();
+    this.installScreenshotEnhancement();
 
     if (this.apiKey) {
       console.log('🔒 [SECURITY] Playwright MCP Security Middleware ACTIVE: API Key Authentication enabled.');

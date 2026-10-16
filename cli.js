@@ -43,6 +43,11 @@ if (!process.argv.includes('--allowed-hosts')) {
   process.argv.push('--allowed-hosts', process.env.MCP_ALLOWED_HOSTS || '*');
 }
 
+// Run in isolated in-memory profile mode to prevent profile lock conflicts ("Browser is already in use")
+if (!process.argv.includes('--isolated')) {
+  process.argv.push('--isolated');
+}
+
 const packageJSON = require('./package.json');
 const p = program.version('Version ' + packageJSON.version).name('Playwright MCP');
 tools.decorateMCPCommand(p, packageJSON.version);
