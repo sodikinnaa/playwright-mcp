@@ -70,6 +70,22 @@ class SecurityManager {
       res.end(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }));
       return false; // Handled, do not forward
     }
+    if (rawUrl === '/robots.txt') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end("User-agent: *\nDisallow:\n");
+      return false;
+    }
+    if ((rawUrl === '/' || rawUrl === '') && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'online',
+        service: 'Playwright MCP Server',
+        mcpEndpoint: '/mcp',
+        sseEndpoint: '/sse',
+        auth: 'api_key_required'
+      }));
+      return false;
+    }
 
     // If no API key configured, allow all requests with a notice
     if (!this.apiKey) {
@@ -138,8 +154,7 @@ class SecurityManager {
 
     // Unauthorized
     res.writeHead(401, {
-      'Content-Type': 'application/json',
-      'WWW-Authenticate': 'Bearer realm="Playwright MCP"'
+      'Content-Type': 'application/json'
     });
     res.end(JSON.stringify({
       error: 'Unauthorized',
