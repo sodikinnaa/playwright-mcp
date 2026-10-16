@@ -18,6 +18,7 @@
   "scripts": {
     "lint": "node update-readme.js",
     "test": "playwright test",
+    "test:security": "node tests/security-middleware.test.js",
     "ctest": "playwright test --project=chrome",
     "ftest": "playwright test --project=firefox",
     "wtest": "playwright test --project=webkit",

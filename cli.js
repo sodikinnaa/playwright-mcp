@@ -25,6 +25,24 @@ if (process.argv.includes('install-browser')) {
   return;
 }
 
+// Initialize security layer before Playwright MCP starts
+let apiKeyFromArg = null;
+const apiKeyIndex = process.argv.indexOf('--api-key');
+if (apiKeyIndex !== -1 && process.argv[apiKeyIndex + 1]) {
+  apiKeyFromArg = process.argv[apiKeyIndex + 1];
+  process.argv.splice(apiKeyIndex, 2);
+}
+
+const { initSecurity } = require('./security');
+initSecurity({
+  apiKey: apiKeyFromArg || process.env.MCP_API_KEY
+});
+
+// Ensure reverse proxy hosts (e.g. browser.siapdigital.id) are permitted by Playwright's host checker
+if (!process.argv.includes('--allowed-hosts')) {
+  process.argv.push('--allowed-hosts', process.env.MCP_ALLOWED_HOSTS || '*');
+}
+
 const packageJSON = require('./package.json');
 const p = program.version('Version ' + packageJSON.version).name('Playwright MCP');
 tools.decorateMCPCommand(p, packageJSON.version);
